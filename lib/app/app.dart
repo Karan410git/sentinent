@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../features/study/presentation/study_scene.dart';
+
+import '../screens/study_scene.dart';
 
 class SentinentApp extends StatelessWidget {
   const SentinentApp({super.key});
