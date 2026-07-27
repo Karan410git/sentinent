@@ -8,10 +8,7 @@ import '../animations/entrance_animation.dart';
 class CandleGlow extends StatelessWidget {
   final EntranceAnimation entrance;
 
-  const CandleGlow({
-    super.key,
-    required this.entrance,
-  });
+  const CandleGlow({super.key, required this.entrance});
 
   @override
   Widget build(BuildContext context) {
@@ -36,23 +33,15 @@ class CandleGlow extends StatelessWidget {
 
     final flicker = math.sin(flickerProgress * math.pi) * 0.045;
 
-   final revealRadius = lerpDouble(
-  40,
-  1150,
-  Curves.easeInOutCubic.transform(revealProgress),
-)!;
-
-    final darkness = lerpDouble(
-      0.94,
-      0.05,
-      settleProgress,
+    final revealRadius = lerpDouble(
+      40,
+      1150,
+      Curves.easeInOutCubic.transform(revealProgress),
     )!;
 
-   final warmGlowOpacity = lerpDouble(
-      0.00,
-      0.22,
-      warmthProgress,
-)! + flicker;
+    final darkness = lerpDouble(0.94, 0.05, settleProgress)!;
+
+    final warmGlowOpacity = lerpDouble(0.00, 0.22, warmthProgress)! + flicker;
 
     return IgnorePointer(
       child: Stack(
@@ -86,12 +75,7 @@ class CandleGlow extends StatelessWidget {
                     Color(0x18FFAA3D),
                     Colors.transparent,
                   ],
-                  stops: [
-                    0.0,
-                    0.32,
-                    0.68,
-                    1.0,
-                  ],
+                  stops: [0.0, 0.32, 0.68, 1.0],
                 ),
               ),
             ),
@@ -111,11 +95,7 @@ class CandleGlow extends StatelessWidget {
                   Color(0x08000000),
                   Color(0x28000000),
                 ],
-                stops: [
-                  0.55,
-                  0.82,
-                  1.0,
-                ],
+                stops: [0.55, 0.82, 1.0],
               ),
             ),
           ),
@@ -123,8 +103,6 @@ class CandleGlow extends StatelessWidget {
       ),
     );
   }
-
-  
 }
 
 class _CandleRevealPainter extends CustomPainter {
@@ -146,10 +124,7 @@ class _CandleRevealPainter extends CustomPainter {
       Candle position. We use coordinates instead of Alignment
       because this painter works directly with the canvas.
     */
-    final candleCenter = Offset(
-      size.width * 0.12,
-      size.height * 0.14,
-    );
+    final candleCenter = Offset(size.width * 0.12, size.height * 0.14);
 
     canvas.saveLayer(bounds, Paint());
 
@@ -158,10 +133,7 @@ class _CandleRevealPainter extends CustomPainter {
     */
     canvas.drawRect(
       bounds,
-      Paint()
-        ..color = Colors.black.withValues(
-          alpha: darkness,
-        ),
+      Paint()..color = Colors.black.withValues(alpha: darkness),
     );
 
     /*
@@ -170,46 +142,21 @@ class _CandleRevealPainter extends CustomPainter {
     */
     canvas.save();
 
-    canvas.translate(
-      candleCenter.dx,
-      candleCenter.dy,
-    );
+    canvas.translate(candleCenter.dx, candleCenter.dy);
 
-    canvas.scale(
-      1.15,
-      0.88,
-    );
+    canvas.scale(1.15, 0.88);
 
-    canvas.translate(
-      -candleCenter.dx,
-      -candleCenter.dy,
-    );
+    canvas.translate(-candleCenter.dx, -candleCenter.dy);
 
     final revealShader = RadialGradient(
       colors: [
-        Colors.white.withValues(
-          alpha: 0.96,
-        ),
-        Colors.white.withValues(
-          alpha: 0.82,
-        ),
-        Colors.white.withValues(
-          alpha: 0.40,
-        ),
+        Colors.white.withValues(alpha: 0.96),
+        Colors.white.withValues(alpha: 0.82),
+        Colors.white.withValues(alpha: 0.40),
         Colors.transparent,
       ],
-      stops: const [
-        0.0,
-        0.30,
-        0.70,
-        1.0,
-      ],
-    ).createShader(
-      Rect.fromCircle(
-        center: candleCenter,
-        radius: radius,
-      ),
-    );
+      stops: const [0.0, 0.30, 0.70, 1.0],
+    ).createShader(Rect.fromCircle(center: candleCenter, radius: radius));
 
     canvas.drawCircle(
       candleCenter,
@@ -226,28 +173,18 @@ class _CandleRevealPainter extends CustomPainter {
       ember-like opening around the candle.
     */
     if (emberStrength > 0 && radius < 200) {
-      final emberRadius = lerpDouble(
-        8,
-        42,
-        emberStrength,
-      )!;
+      final emberRadius = lerpDouble(8, 42, emberStrength)!;
 
-      final emberShader = RadialGradient(
-        colors: [
-          Colors.white.withValues(
-            alpha: 0.95,
-          ),
-          Colors.white.withValues(
-            alpha: 0.30,
-          ),
-          Colors.transparent,
-        ],
-      ).createShader(
-        Rect.fromCircle(
-          center: candleCenter,
-          radius: emberRadius,
-        ),
-      );
+      final emberShader =
+          RadialGradient(
+            colors: [
+              Colors.white.withValues(alpha: 0.95),
+              Colors.white.withValues(alpha: 0.30),
+              Colors.transparent,
+            ],
+          ).createShader(
+            Rect.fromCircle(center: candleCenter, radius: emberRadius),
+          );
 
       canvas.drawCircle(
         candleCenter,

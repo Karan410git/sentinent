@@ -3,124 +3,43 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 
 class LeatherAOPainter extends CustomPainter {
-  const LeatherAOPainter({
-    this.breathingProgress = 0,
-  });
+  const LeatherAOPainter({required this.floatingProgress});
 
-  final double breathingProgress;
+  final double floatingProgress;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final width = size.width;
-    final height = size.height;
+    final progress = floatingProgress.clamp(0.0, 1.0);
 
-    /*
-      When Sacheta rises during breathing, the contact darkness
-      becomes slightly weaker.
-    */
-    final contactStrength =
-        lerpDouble(1.0, 0.72, breathingProgress) ?? 1.0;
+    final aoOpacity = lerpDouble(0.27, 0.06, progress) ?? 0.18;
 
-    final contactLift =
-        lerpDouble(0.0, 1.8, breathingProgress) ?? 0.0;
+    final aoBlur = lerpDouble(6.0, 12.0, progress) ?? 6.0;
 
-    /*
-      Contact beneath the visible page block.
-      This should be narrow and close to the page edge.
-    */
-    final pageContact = Path()
-      ..moveTo(width * 0.270, height * 0.912)
-      ..lineTo(width * 0.925, height * 0.748)
-      ..lineTo(width * 0.938, height * 0.775)
-      ..lineTo(width * 0.292, height * 0.948)
-      ..close();
+    final aoWidth = lerpDouble(0.76, 0.83, progress) ?? 0.77;
 
-    canvas.drawPath(
-      pageContact.shift(
-        Offset(
-          width * 0.003,
-          height * 0.004 + contactLift,
-        ),
-      ),
-      Paint()
-        ..color = Colors.black.withValues(
-          alpha: 0.34 * contactStrength,
-        )
-        ..maskFilter = const MaskFilter.blur(
-          BlurStyle.normal,
-          2.2,
-        ),
+    final aoHeight = lerpDouble(0.60, 0.66, progress) ?? 0.61;
+
+    final contactRect = Rect.fromCenter(
+      center: Offset(size.width * 0.50, size.height * 0.54),
+      width: size.width * aoWidth,
+      height: size.height * aoHeight,
     );
 
-    /*
-      Contact beneath the lowest curved section of the spine.
-    */
-    final spineContact = Path()
-      ..moveTo(width * 0.158, height * 0.785)
-      ..quadraticBezierTo(
-        width * 0.190,
-        height * 0.905,
-        width * 0.286,
-        height * 0.956,
-      )
-      ..lineTo(width * 0.306, height * 0.934)
-      ..quadraticBezierTo(
-        width * 0.220,
-        height * 0.885,
-        width * 0.184,
-        height * 0.775,
-      )
-      ..close();
+    final contactPaint = Paint()
+      ..color = Colors.black.withValues(alpha: aoOpacity)
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, aoBlur);
 
-    canvas.drawPath(
-      spineContact.shift(
-        Offset(
-          width * 0.002,
-          height * 0.003 + contactLift,
-        ),
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        contactRect,
+        Radius.circular(size.shortestSide * 0.03),
       ),
-      Paint()
-        ..color = Colors.black.withValues(
-          alpha: 0.28 * contactStrength,
-        )
-        ..maskFilter = const MaskFilter.blur(
-          BlurStyle.normal,
-          2.0,
-        ),
-    );
-
-    /*
-      Tiny contact cue beside the lower-right corner.
-      This prevents the brass corner and page block from appearing
-      disconnected from the mat.
-    */
-    final cornerContact = Path()
-      ..moveTo(width * 0.900, height * 0.736)
-      ..lineTo(width * 0.955, height * 0.778)
-      ..lineTo(width * 0.930, height * 0.800)
-      ..lineTo(width * 0.885, height * 0.758)
-      ..close();
-
-    canvas.drawPath(
-      cornerContact.shift(
-        Offset(
-          width * 0.003,
-          height * 0.003 + contactLift,
-        ),
-      ),
-      Paint()
-        ..color = Colors.black.withValues(
-          alpha: 0.24 * contactStrength,
-        )
-        ..maskFilter = const MaskFilter.blur(
-          BlurStyle.normal,
-          1.8,
-        ),
+      contactPaint,
     );
   }
 
   @override
   bool shouldRepaint(covariant LeatherAOPainter oldDelegate) {
-    return oldDelegate.breathingProgress != breathingProgress;
+    return oldDelegate.floatingProgress != floatingProgress;
   }
 }

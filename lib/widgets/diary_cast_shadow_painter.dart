@@ -3,123 +3,45 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 
 class DiaryCastShadowPainter extends CustomPainter {
-  const DiaryCastShadowPainter({
-    this.breathingProgress = 0,
-  });
+  const DiaryCastShadowPainter({required this.floatingProgress});
 
-  final double breathingProgress;
+  final double floatingProgress;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final width = size.width;
-    final height = size.height;
+    final progress = floatingProgress.clamp(0.0, 1.0);
 
-    final diaryShape = Path()
-      ..moveTo(width * 0.095, height * 0.205)
-      ..lineTo(width * 0.765, height * 0.045)
-      ..lineTo(width * 0.955, height * 0.785)
-      ..lineTo(width * 0.285, height * 0.965)
-      ..quadraticBezierTo(
-        width * 0.185,
-        height * 0.955,
-        width * 0.155,
-        height * 0.875,
-      )
-      ..lineTo(width * 0.075, height * 0.29)
-      ..quadraticBezierTo(
-        width * 0.065,
-        height * 0.235,
-        width * 0.095,
-        height * 0.205,
-      )
-      ..close();
+    final shadowOpacity = lerpDouble(0.28, 0.13, progress) ?? 0.24;
 
-    /*
-      As Sacheta rises, the cast shadow moves slightly farther away
-      and becomes a little softer.
-    */
-    final shadowDistance =
-        lerpDouble(0.0, 4.0, breathingProgress) ?? 0.0;
+    final shadowBlur = lerpDouble(10.0, 18.0, progress) ?? 10.0;
 
-    final blurSigma =
-        lerpDouble(14.0, 17.0, breathingProgress) ?? 14.0;
+    final horizontalSpread = lerpDouble(1.0, 1.08, progress) ?? 1.0;
 
-    final opacity =
-        lerpDouble(0.16, 0.12, breathingProgress) ?? 0.16;
+    final verticalSpread = lerpDouble(1.0, 1.05, progress) ?? 1.0;
 
-    _drawDirectionalShadow(
-      canvas: canvas,
-      sourcePath: diaryShape,
-      offset: Offset(
-        width * 0.075 + shadowDistance,
-        height * 0.014 + shadowDistance * 0.35,
+    final verticalOffset = lerpDouble(4.0, 6.0, progress) ?? 4.0;
+
+    final shadowRect = Rect.fromCenter(
+      center: Offset(size.width * 0.50, size.height * 0.55 + verticalOffset),
+      width: size.width * 0.82 * horizontalSpread,
+      height: size.height * 0.67 * verticalSpread,
+    );
+
+    final shadowPaint = Paint()
+      ..color = Colors.black.withValues(alpha: shadowOpacity)
+      ..maskFilter = MaskFilter.blur(BlurStyle.normal, shadowBlur);
+
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        shadowRect,
+        Radius.circular(size.shortestSide * 0.035),
       ),
-      opacity: opacity,
-      blurSigma: blurSigma,
-      stretchX: 1.065,
-      stretchY: 1.006,
+      shadowPaint,
     );
-  }
-
-  void _drawDirectionalShadow({
-    required Canvas canvas,
-    required Path sourcePath,
-    required Offset offset,
-    required double opacity,
-    required double blurSigma,
-    required double stretchX,
-    required double stretchY,
-  }) {
-    final bounds = sourcePath.getBounds();
-    final center = bounds.center;
-
-    canvas.save();
-
-    canvas.translate(
-      center.dx + offset.dx,
-      center.dy + offset.dy,
-    );
-
-    canvas.scale(
-      stretchX,
-      stretchY,
-    );
-
-    canvas.translate(
-      -center.dx,
-      -center.dy,
-    );
-
-    /*
-      Keep the broad cast shadow primarily on the side opposite
-      the upper-left candle.
-    */
-    canvas.clipRect(
-      Rect.fromLTRB(
-        bounds.left + bounds.width * 0.48,
-        bounds.top - blurSigma * 3,
-        bounds.right + offset.dx + blurSigma * 4,
-        bounds.bottom + offset.dy + blurSigma * 4,
-      ),
-    );
-
-    canvas.drawPath(
-      sourcePath,
-      Paint()
-        ..color = Colors.black.withValues(alpha: opacity)
-        ..maskFilter = MaskFilter.blur(
-          BlurStyle.normal,
-          blurSigma,
-        ),
-    );
-
-    canvas.restore();
   }
 
   @override
-  bool shouldRepaint(
-    covariant DiaryCastShadowPainter oldDelegate,
-  ) {
-    return oldDelegate.breathingProgress != breathingProgress;
+  bool shouldRepaint(covariant DiaryCastShadowPainter oldDelegate) {
+    return oldDelegate.floatingProgress != floatingProgress;
   }
 }

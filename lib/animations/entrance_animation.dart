@@ -12,47 +12,27 @@ class EntranceAnimation {
   EntranceAnimation(this.controller) {
     ember = CurvedAnimation(
       parent: controller,
-      curve: const Interval(
-        0.00,
-        0.12,
-        curve: Curves.easeOut,
-      ),
+      curve: const Interval(0.00, 0.12, curve: Curves.easeOut),
     );
 
     reveal = CurvedAnimation(
       parent: controller,
-      curve: const Interval(
-        0.08,
-        0.78,
-        curve: Curves.easeInOutCubic,
-      ),
+      curve: const Interval(0.08, 0.78, curve: Curves.easeInOutCubic),
     );
 
     warmth = CurvedAnimation(
       parent: controller,
-      curve: const Interval(
-        0.25,
-        0.90,
-        curve: Curves.easeOut,
-      ),
+      curve: const Interval(0.25, 0.90, curve: Curves.easeOut),
     );
 
     settle = CurvedAnimation(
       parent: controller,
-      curve: const Interval(
-        0.70,
-        1.00,
-        curve: Curves.easeOut,
-      ),
+      curve: const Interval(0.70, 1.00, curve: Curves.easeOut),
     );
 
     flicker = CurvedAnimation(
       parent: controller,
-      curve: const Interval(
-        0.90,
-        1.00,
-        curve: Curves.easeInOut,
-      ),
+      curve: const Interval(0.90, 1.00, curve: Curves.easeInOut),
     );
   }
 }
