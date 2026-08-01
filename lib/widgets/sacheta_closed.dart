@@ -10,6 +10,8 @@ class SachetaClosed extends StatelessWidget {
   this.floatingProgress = 0,
   this.goldDustProgress = 0,
   this.sealGlowProgress = 0,
+  this.sealDustProgress = 0,
+
 });
 
   final double widthFactor;
@@ -17,6 +19,7 @@ class SachetaClosed extends StatelessWidget {
   final double floatingProgress;
   final double goldDustProgress;
   final double sealGlowProgress;
+  final double sealDustProgress;
 
   @override
   Widget build(BuildContext context) {
@@ -32,6 +35,7 @@ class SachetaClosed extends StatelessWidget {
   floatingProgress: floatingProgress,
   goldDustProgress: goldDustProgress,
   sealGlowProgress: sealGlowProgress,
+   sealDustProgress: sealDustProgress,
 ),
       ),
     );

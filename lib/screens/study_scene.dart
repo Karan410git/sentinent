@@ -24,6 +24,8 @@ class _StudySceneState extends State<StudyScene>
   late final AnimationController _goldDustController;
   late final AnimationController _openSequenceController;
   late final AnimationController _sealWakeController;
+  late final AnimationController _sealDustController;
+  late final AnimationController _cameraController;
 
   Timer? _goldDustTimer;
 
@@ -62,6 +64,15 @@ class _StudySceneState extends State<StudyScene>
       vsync: this,
       duration: const Duration(milliseconds: 1100),
     );
+
+    _sealDustController = AnimationController(
+  vsync: this,
+  duration: const Duration(milliseconds: 1800),
+);
+_cameraController = AnimationController(
+  vsync: this,
+  duration: const Duration(milliseconds: 1800),
+);
     
 
     _startScene();
@@ -137,16 +148,32 @@ class _StudySceneState extends State<StudyScene>
     }
 
     await _openSequenceController.forward(
-  from: 0,
-);
+      from: 0,
+    );
 
-if (!mounted) {
-  return;
-}
+    if (!mounted) {
+      return;
+    }
 
-await _sealWakeController.forward(
-  from: 0,
-);
+    await _sealWakeController.forward(
+      from: 0,
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    await _sealDustController.forward(
+      from: 0,
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    await _cameraController.forward(
+      from: 0,
+    );
   }
 
   @override
@@ -158,6 +185,8 @@ await _sealWakeController.forward(
     _goldDustController.dispose();
     _openSequenceController.dispose();
     _sealWakeController.dispose();
+    _sealDustController.dispose();
+    _cameraController.dispose();
 
     super.dispose();
   }
@@ -172,6 +201,8 @@ await _sealWakeController.forward(
           _goldDustController,
           _openSequenceController,
           _sealWakeController,
+          _sealDustController,
+          _cameraController,
         ]),
         builder: (context, child) {
           final floatingProgress =
@@ -194,37 +225,64 @@ final diaryYOffset =
 
           final sealGlowProgress =
               Curves.easeInOut.transform(_sealWakeController.value);
+          
+          final sealDustProgress =
+    Curves.easeInOutCubic.transform(
+  _sealDustController.value,
+);    
+final cameraProgress = Curves.easeInOutCubic.transform(
+  _cameraController.value,
+);
+
+final cameraScale = 1 + cameraProgress * 0.38;
+final cameraYOffset = cameraProgress * 18;
 
           return Stack(
-            fit: StackFit.expand,
-            children: [
-              const ExplorerDesk(),
+  fit: StackFit.expand,
+  children: [
+    Transform.translate(
+      offset: Offset(
+        0,
+        cameraYOffset,
+      ),
+      child: Transform.scale(
+        scale: cameraScale,
+        alignment: const Alignment(-0.04, 0.28),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            const ExplorerDesk(),
 
-              Transform.translate(
-                offset: Offset(
-                  0,
-                  diaryYOffset,
-                ),
-                child: Transform.scale(
-                  scale: diaryScale,
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.translucent,
-                    onTap: _handleDiaryTap,
-                    child: SachetaClosed(
-                      floatingProgress: floatingProgress,
-                      goldDustProgress:
-                          _goldDustController.value,
-                      sealGlowProgress: sealGlowProgress,
-                    ),
+            Transform.translate(
+              offset: Offset(
+                0,
+                diaryYOffset,
+              ),
+              child: Transform.scale(
+                scale: diaryScale,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.translucent,
+                  onTap: _handleDiaryTap,
+                  child: SachetaClosed(
+                    floatingProgress: floatingProgress,
+                    goldDustProgress:
+                        _goldDustController.value,
+                    sealGlowProgress: sealGlowProgress,
+                    sealDustProgress: sealDustProgress,
                   ),
                 ),
               ),
+            ),
+          ],
+        ),
+      ),
+    ),
 
-              CandleGlow(
-                entrance: _entrance,
-              ),
-            ],
-          );
+                CandleGlow(
+                  entrance: _entrance,
+                ),
+              ],
+            );
         },
       ),
     );
