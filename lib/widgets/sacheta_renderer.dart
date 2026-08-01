@@ -6,6 +6,7 @@ import 'diary_cast_shadow_painter.dart';
 import 'gold_dust_painter.dart';
 import 'leather_ao_painter.dart';
 import 'whisper_dust_painter.dart';
+import 'seal_glow_painter.dart';
 
 class SachetaRenderer extends StatelessWidget {
   const SachetaRenderer({
@@ -13,11 +14,13 @@ class SachetaRenderer extends StatelessWidget {
     required this.assetPath,
     this.floatingProgress = 0,
     this.goldDustProgress = 0,
+    this.sealGlowProgress = 0,
   });
 
   final String assetPath;
   final double floatingProgress;
   final double goldDustProgress;
+  final double sealGlowProgress;
 
   @override
   Widget build(BuildContext context) {
@@ -80,7 +83,15 @@ class SachetaRenderer extends StatelessWidget {
             ),
           ),
         ),
-
+      Positioned.fill(
+  child: IgnorePointer(
+    child: CustomPaint(
+      painter: SealGlowPainter(
+        progress: sealGlowProgress,
+      ),
+    ),
+  ),
+),
         Positioned.fill(
           child: IgnorePointer(
             child: CustomPaint(
