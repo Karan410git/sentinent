@@ -86,24 +86,20 @@ class SachetaRenderer extends StatelessWidget {
             ),
           ),
         ),
-      Positioned.fill(
-  child: IgnorePointer(
-    child: CustomPaint(
-      painter: SealDustPainter(
-        progress: sealDustProgress,
-      ),
-    ),
-  ),
-),  
-      Positioned.fill(
-  child: IgnorePointer(
-    child: CustomPaint(
-      painter: SealGlowPainter(
-        progress: sealGlowProgress,
-      ),
-    ),
-  ),
-),
+        Positioned.fill(
+          child: IgnorePointer(
+            child: CustomPaint(
+              painter: SealDustPainter(progress: sealDustProgress),
+            ),
+          ),
+        ),
+        Positioned.fill(
+          child: IgnorePointer(
+            child: CustomPaint(
+              painter: SealGlowPainter(progress: sealGlowProgress),
+            ),
+          ),
+        ),
         Positioned.fill(
           child: IgnorePointer(
             child: CustomPaint(

@@ -3,9 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 class SealGlowPainter extends CustomPainter {
-  const SealGlowPainter({
-    required this.progress,
-  });
+  const SealGlowPainter({required this.progress});
 
   final double progress;
 
@@ -21,39 +19,19 @@ class SealGlowPainter extends CustomPainter {
     final envelope = math.sin(value * math.pi);
 
     // Approximate position of Sacheta's circular emblem.
-    final center = Offset(
-      size.width * 0.49,
-      size.height * 0.33,
-    );
+    final center = Offset(size.width * 0.49, size.height * 0.33);
 
-    final radius = size.shortestSide *
-        (0.09 + envelope * 0.045);
+    final radius = size.shortestSide * (0.09 + envelope * 0.045);
 
     final glowShader = RadialGradient(
       colors: [
-        const Color(0xFFFFE3A0).withValues(
-          alpha: envelope * 0.52,
-        ),
-        const Color(0xFFFFBD4A).withValues(
-          alpha: envelope * 0.25,
-        ),
-        const Color(0xFFE58B24).withValues(
-          alpha: envelope * 0.08,
-        ),
+        const Color(0xFFFFE3A0).withValues(alpha: envelope * 0.52),
+        const Color(0xFFFFBD4A).withValues(alpha: envelope * 0.25),
+        const Color(0xFFE58B24).withValues(alpha: envelope * 0.08),
         Colors.transparent,
       ],
-      stops: const [
-        0.0,
-        0.28,
-        0.62,
-        1.0,
-      ],
-    ).createShader(
-      Rect.fromCircle(
-        center: center,
-        radius: radius,
-      ),
-    );
+      stops: const [0.0, 0.28, 0.62, 1.0],
+    ).createShader(Rect.fromCircle(center: center, radius: radius));
 
     canvas.drawCircle(
       center,
@@ -68,21 +46,14 @@ class SealGlowPainter extends CustomPainter {
       center,
       size.shortestSide * 0.042,
       Paint()
-        ..color = const Color(0xFFFFD77A).withValues(
-          alpha: envelope * 0.13,
-        )
-        ..maskFilter = const MaskFilter.blur(
-          BlurStyle.normal,
-          5,
-        )
+        ..color = const Color(0xFFFFD77A).withValues(alpha: envelope * 0.13)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 5)
         ..blendMode = BlendMode.screen,
     );
   }
 
   @override
-  bool shouldRepaint(
-    covariant SealGlowPainter oldDelegate,
-  ) {
+  bool shouldRepaint(covariant SealGlowPainter oldDelegate) {
     return oldDelegate.progress != progress;
   }
 }
