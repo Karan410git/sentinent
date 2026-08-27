@@ -1,9 +1,12 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../config/supabase_config.dart';
 import '../services/session_service.dart';
 import 'initiation_screen.dart';
 import 'study_scene.dart';
@@ -31,6 +34,8 @@ class _EntranceScreenState extends State<EntranceScreen>
   bool _isLoading = false;
   String? _errorMessage;
 
+  StreamSubscription<AuthState>? _authSub;
+
   @override
   void initState() {
     super.initState();
@@ -44,10 +49,45 @@ class _EntranceScreenState extends State<EntranceScreen>
       vsync: this,
       duration: const Duration(seconds: 18),
     )..repeat();
+
+    // Listen for OAuth return — Supabase fires signedIn after
+    // the browser redirect completes and the session is established.
+    _authSub = Supabase.instance.client.auth.onAuthStateChange.listen((
+      state,
+    ) async {
+      if (!mounted) return;
+
+      final event = state.event;
+      debugPrint('[Sacheta Auth UI] Auth state change: $event');
+
+      if (event == AuthChangeEvent.signedIn ||
+          event == AuthChangeEvent.tokenRefreshed) {
+        if (state.session != null) {
+          final onboardingDone =
+              await SessionService.instance.hasCompletedIntroduction;
+          if (!mounted) return;
+
+          setState(() => _isLoading = false);
+
+          if (onboardingDone) {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (_) => const StudyScene()),
+              (route) => false,
+            );
+          } else {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (_) => const InitiationScreen()),
+            );
+          }
+        }
+      }
+    });
   }
 
   @override
   void dispose() {
+    _authSub?.cancel();
+
     _fadeController.dispose();
     _dustController.dispose();
 
@@ -217,13 +257,38 @@ class _EntranceScreenState extends State<EntranceScreen>
   }
 
   Future<void> _handleGoogle() async {
+    if (_isLoading) return;
     if (!mounted) return;
 
     setState(() {
-      _errorMessage =
-          'Google has not yet been invited to these pages.\n'
-          'Please use email for now.';
+      _isLoading = true;
+      _errorMessage = null;
     });
+
+    debugPrint('[Sacheta Auth UI] Google OAuth initiated');
+
+    try {
+      final error = await Supabase.instance.client.auth.signInWithOAuth(
+        OAuthProvider.google,
+        redirectTo: SupabaseConfig.redirectTo,
+        authScreenLaunchMode: LaunchMode.externalApplication,
+      );
+
+      debugPrint('[Sacheta Auth UI] Google OAuth returned: $error');
+
+      if (!mounted) return;
+
+      // signInWithOAuth opens the browser — auth state listener handles
+      // session establishment when the user returns to the app.
+    } catch (e) {
+      debugPrint('[Sacheta Auth UI] Google OAuth error: $e');
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _errorMessage =
+            'Something interrupted the journey to Google. Please try again.';
+      });
+    }
   }
 
   // ============================================================

@@ -17,4 +17,9 @@ class SupabaseConfig {
 
   /// Whether the anon key has been provided.
   static bool get isConfigured => anonKey.isNotEmpty;
+
+  /// OAuth redirect URL for Supabase mobile auth (Google, etc.).
+  /// Must match the redirect URL configured in Supabase Dashboard →
+  /// Authentication → URL Configuration → Redirect URLs.
+  static const String redirectTo = 'io.supabase.sentinent://login-callback/';
 }
