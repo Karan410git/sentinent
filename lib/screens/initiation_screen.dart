@@ -4,13 +4,14 @@ import 'package:google_fonts/google_fonts.dart';
 
 import '../services/ai_config.dart';
 import '../services/session_service.dart';
+import 'study_scene.dart';
 
 /// First-time initiation — Sacheta introduces itself and its world.
 /// 5 steps: Sacheta, History, Journey, The Key, Language Style, then final.
 class InitiationScreen extends StatefulWidget {
-  const InitiationScreen({super.key, required this.onComplete});
+  const InitiationScreen({super.key, this.onComplete});
 
-  final VoidCallback onComplete;
+  final VoidCallback? onComplete;
 
   @override
   State<InitiationScreen> createState() => _InitiationScreenState();
@@ -67,7 +68,13 @@ class _InitiationScreenState extends State<InitiationScreen>
         // Persist the language style choice.
         await AIConfig.instance.updateLanguageStyle(_languageStyle);
         await SessionService.instance.completeIntroduction();
-        widget.onComplete();
+
+        // Navigate using our own context (the parent may be disposed).
+        if (!mounted) return;
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const StudyScene()),
+          (route) => false,
+        );
       } else {
         _fadeController.duration = const Duration(milliseconds: 900);
         _fadeController.forward();

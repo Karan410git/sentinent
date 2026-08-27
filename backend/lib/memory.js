@@ -1,48 +1,59 @@
-const fs = require('fs');
-const path = require('path');
-
-const MEMORY_DIR = path.join(__dirname, '..', 'data');
-
-function ensureDir() {
-  if (!fs.existsSync(MEMORY_DIR)) {
-    fs.mkdirSync(MEMORY_DIR, { recursive: true });
-  }
-}
-
-function memoryPath() {
-  return path.join(MEMORY_DIR, 'sacheta_memory.json');
-}
+const supabase = require('./supabase');
 
 /**
- * Load Sacheta's long-term memory.
+ * Load Sacheta's long-term memory for a user from Supabase.
+ * @param {string} userId - The authenticated user's ID.
  * @returns {Promise<Object>}
  */
-async function loadMemory() {
-  ensureDir();
-  const p = memoryPath();
-  if (!fs.existsSync(p)) {
+async function loadMemory(userId) {
+  if (!supabase || !userId) {
     return { facts: [], themes: [], style: { tone: 'neutral', length: 'medium' } };
   }
-  const raw = fs.readFileSync(p, 'utf-8');
-  return JSON.parse(raw);
+
+  try {
+    const { data, error } = await supabase
+      .from('memories')
+      .select('content')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (error || !data || !data.content) {
+      return { facts: [], themes: [], style: { tone: 'neutral', length: 'medium' } };
+    }
+
+    return data.content;
+  } catch (_) {
+    return { facts: [], themes: [], style: { tone: 'neutral', length: 'medium' } };
+  }
 }
 
 /**
- * Save Sacheta's long-term memory.
+ * Save Sacheta's long-term memory for a user in Supabase.
+ * @param {string} userId - The authenticated user's ID.
  * @param {Object} memory
  */
-async function saveMemory(memory) {
-  ensureDir();
-  memory.lastUpdated = new Date().toISOString();
-  fs.writeFileSync(memoryPath(), JSON.stringify(memory, null, 2));
+async function saveMemory(userId, memory) {
+  if (!supabase || !userId) return;
+
+  try {
+    await supabase
+      .from('memories')
+      .upsert(
+        { user_id: userId, content: memory },
+        { onConflict: 'user_id' }
+      );
+  } catch (_) {
+    // Best-effort — never block.
+  }
 }
 
 /**
- * Merge newly extracted facts into existing memory.
+ * Merge newly extracted facts into existing memory for a user.
+ * @param {string} userId - The authenticated user's ID.
  * @param {Object} extracted - { facts: [], themes: [], style: {} }
  */
-async function mergeMemory(extracted) {
-  const existing = await loadMemory();
+async function mergeMemory(userId, extracted) {
+  const existing = await loadMemory(userId);
 
   // Merge facts — deduplicate.
   const oldFacts = new Set(existing.facts || []);
@@ -68,7 +79,7 @@ async function mergeMemory(extracted) {
     lastUpdated: new Date().toISOString(),
   };
 
-  await saveMemory(merged);
+  await saveMemory(userId, merged);
   return merged;
 }
 

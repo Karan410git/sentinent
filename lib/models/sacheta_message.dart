@@ -27,4 +27,16 @@ class SachetaMessage {
       createdAt: DateTime.parse(json['createdAt'] as String),
     );
   }
+
+  /// Create from a Supabase row.
+  factory SachetaMessage.fromSupabase(Map<String, dynamic> row) {
+    return SachetaMessage(
+      id: row['id'] as String,
+      role: row['role'] as String,
+      content: row['content'] as String,
+      createdAt: row['created_at'] != null
+          ? DateTime.parse(row['created_at'] as String)
+          : DateTime.now(),
+    );
+  }
 }

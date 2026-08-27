@@ -6,6 +6,7 @@ import '../screens/initiation_screen.dart';
 import '../services/session_service.dart';
 import 'account_screen.dart';
 import 'about_screen.dart';
+import 'entrance_screen.dart';
 import 'preferences_screen.dart';
 import 'privacy_screen.dart';
 
@@ -140,12 +141,7 @@ class SettingsScreen extends StatelessWidget {
                       icon: Icons.logout,
                       label: 'Leave / Log Out',
                       isDestructive: true,
-                      onTap: () async {
-                        await SessionService.instance.logout();
-                        if (context.mounted) {
-                          Navigator.of(context).pushReplacementNamed('/');
-                        }
-                      },
+                      onTap: () => _confirmLogout(context),
                     ),
                   ],
                 ),
@@ -153,6 +149,76 @@ class SettingsScreen extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  void _confirmLogout(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1A120A),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(6),
+          side: BorderSide(
+            color: const Color(0xFFD4C5A9).withValues(alpha: 0.12),
+            width: 0.8,
+          ),
+        ),
+        title: Text(
+          'Leave the pages?',
+          style: GoogleFonts.cormorantGaramond(
+            fontSize: 20,
+            color: const Color(0xFFD4C5A9),
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        content: Text(
+          'Your pages will remain safely stored.\nYou can return anytime.',
+          style: GoogleFonts.cormorantGaramond(
+            fontSize: 15,
+            color: const Color(0xFFD4C5A9).withValues(alpha: 0.6),
+            fontWeight: FontWeight.w300,
+            height: 1.5,
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(
+              'Cancel',
+              style: GoogleFonts.cormorantGaramond(
+                fontSize: 14,
+                color: const Color(0xFFD4C5A9).withValues(alpha: 0.5),
+                fontWeight: FontWeight.w400,
+                letterSpacing: 1,
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.of(ctx).pop();
+              await SessionService.instance.signOut();
+              if (context.mounted) {
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(
+                    builder: (_) => EntranceScreen(onNext: () {}),
+                  ),
+                  (route) => false,
+                );
+              }
+            },
+            child: Text(
+              'Log Out',
+              style: GoogleFonts.cormorantGaramond(
+                fontSize: 14,
+                color: const Color(0xFF8B3A3A),
+                fontWeight: FontWeight.w500,
+                letterSpacing: 1,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

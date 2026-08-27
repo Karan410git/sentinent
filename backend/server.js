@@ -10,7 +10,9 @@ const PORT = process.env.PORT || 3000;
 const AI_PROVIDER = process.env.AI_PROVIDER || 'deepseek';
 
 // Middleware.
-app.use(cors());
+app.use(cors({
+  allowedHeaders: ['Content-Type', 'Authorization'],
+}));
 app.use(express.json({ limit: '1mb' }));
 
 // Request logging.

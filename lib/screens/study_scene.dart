@@ -3,10 +3,10 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../animations/entrance_animation.dart';
-import '../models/conversation_repository.dart';
-import '../models/diary_entry.dart';
-import '../models/diary_repository.dart';
+import 'package:sentinent/animations/entrance_animation.dart';
+import 'package:sentinent/models/conversation_repository.dart';
+import 'package:sentinent/models/diary_entry.dart';
+import 'package:sentinent/models/diary_repository.dart';
 import '../models/sacheta_conversation.dart';
 import '../widgets/ambient_dust_painter.dart';
 import '../widgets/candle_glow.dart';

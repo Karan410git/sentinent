@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const requireAuth = require('../lib/auth');
 const { getProvider } = require('../providers');
 const memory = require('../lib/memory');
 const { SYSTEM_PROMPT, MEMORY_EXTRACTION_PROMPT, getStyledSystemPrompt } = require('../prompts/system');
@@ -7,27 +8,29 @@ const { SYSTEM_PROMPT, MEMORY_EXTRACTION_PROMPT, getStyledSystemPrompt } = requi
 /**
  * POST /api/sacheta/respond
  *
+ * Requires: Authorization: Bearer <supabase_access_token>
  * Body:
  *   messages: Array<{role: 'user'|'sacheta', content: string}>
  *   conversationId: string (for logging/context)
+ *   languageStyle: string ('poetic' | 'balanced' | 'simple')
  *
  * Returns:
  *   { content: string, model: string }
  */
-router.post('/respond', async (req, res) => {
+router.post('/respond', requireAuth, async (req, res) => {
   try {
     const { messages, conversationId, languageStyle } = req.body;
+    const userId = req.userId;
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return res.status(400).json({ error: 'messages array is required' });
     }
 
-    // Load long-term memory context.
-    const mem = await memory.loadMemory();
+    // Load long-term memory context for this verified user.
+    const mem = await memory.loadMemory(userId);
     const memoryContext = buildMemoryContext(mem);
 
     // Build context messages for the AI.
-    // Use the language-style variant of the system prompt.
     const style = languageStyle || 'poetic';
     const contextMessages = [
       { role: 'system', content: getStyledSystemPrompt(style) },
@@ -58,7 +61,6 @@ router.post('/respond', async (req, res) => {
   } catch (err) {
     console.error('[sacheta/respond] Error:', err.message);
 
-    // Convert provider errors to safe application errors.
     if (err.message?.includes('API_KEY') || err.message?.includes('not configured')) {
       return res.status(503).json({
         error: 'sacheta_unavailable',
@@ -83,19 +85,21 @@ router.post('/respond', async (req, res) => {
 /**
  * POST /api/sacheta/extract-memory
  *
+ * Requires: Authorization: Bearer <supabase_access_token>
  * Body:
  *   messages: Array<{role: 'user'|'sacheta', content: string}>
  *
  * Runs memory extraction in the background.
  * Returns 204 immediately.
  */
-router.post('/extract-memory', async (req, res) => {
+router.post('/extract-memory', requireAuth, async (req, res) => {
   // Respond immediately — extraction runs in background.
   res.status(204).send();
 
   // Fire and forget.
   try {
     const { messages } = req.body;
+    const userId = req.userId;
     if (!messages || !Array.isArray(messages) || messages.length === 0) return;
 
     const extractionMessages = [
@@ -126,7 +130,7 @@ router.post('/extract-memory', async (req, res) => {
     }
 
     if (extracted) {
-      await memory.mergeMemory(extracted);
+      await memory.mergeMemory(userId, extracted);
     }
   } catch (_) {
     // Memory extraction is best-effort — never block.
@@ -136,11 +140,14 @@ router.post('/extract-memory', async (req, res) => {
 /**
  * GET /api/sacheta/memory
  *
- * Returns the current memory state (for debugging/inspection).
+ * Requires: Authorization: Bearer <supabase_access_token>
+ *
+ * Returns the current memory state for the authenticated user.
  */
-router.get('/memory', async (req, res) => {
+router.get('/memory', requireAuth, async (req, res) => {
   try {
-    const mem = await memory.loadMemory();
+    const userId = req.userId;
+    const mem = await memory.loadMemory(userId);
     res.json(mem);
   } catch (err) {
     res.status(500).json({ error: 'Failed to load memory' });

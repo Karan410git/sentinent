@@ -1,69 +1,90 @@
-import 'dart:convert';
-import 'dart:io';
-
-import 'package:path_provider/path_provider.dart';
-import 'package:uuid/uuid.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'sacheta_conversation.dart';
 import 'sacheta_message.dart';
 
-/// Local persistence for Sacheta conversations using a single JSON file.
-/// Separate from DiaryRepository — conversations and My Pages are isolated.
+/// Persistence for Sacheta conversations and memory using Supabase.
+/// Supabase is the single source of truth. RLS enforces per-user isolation.
 class ConversationRepository {
   ConversationRepository._();
 
   static final ConversationRepository instance = ConversationRepository._();
 
-  static const _fileName = 'sacheta_conversations.json';
-  static const _memoryFileName = 'sacheta_memory.json';
-  static const _uuid = Uuid();
-
-  List<SachetaConversation>? _cache;
-  Map<String, dynamic>? _memoryCache;
-
-  Future<File> get _file async {
-    final dir = await getApplicationDocumentsDirectory();
-    return File('${dir.path}/$_fileName');
-  }
-
-  Future<File> get _memoryFile async {
-    final dir = await getApplicationDocumentsDirectory();
-    return File('${dir.path}/$_memoryFileName');
-  }
+  SupabaseClient get _client => Supabase.instance.client;
+  String? get _userId => _client.auth.currentUser?.id;
 
   // ── Conversations ──────────────────────────────────────────────
 
-  /// Load all conversations from disk (cached after first read).
+  /// Load all conversations for the current user with their messages,
+  /// most recently updated first.
   Future<List<SachetaConversation>> loadConversations() async {
-    if (_cache != null) return _cache!;
+    final userId = _userId;
+    if (userId == null) return [];
 
-    final f = await _file;
-    if (!await f.exists()) {
-      _cache = [];
-      return _cache!;
+    // Load conversations.
+    final convData = await _client
+        .from('conversations')
+        .select()
+        .eq('user_id', userId)
+        .order('updated_at', ascending: false);
+
+    final conversations = <SachetaConversation>[];
+
+    for (final convRow in convData as List<dynamic>) {
+      final convMap = convRow as Map<String, dynamic>;
+      final convId = convMap['id'] as String;
+
+      // Load messages for this conversation.
+      final msgData = await _client
+          .from('messages')
+          .select()
+          .eq('conversation_id', convId)
+          .order('created_at', ascending: true);
+
+      final messages = (msgData as List<dynamic>)
+          .map((m) => SachetaMessage.fromSupabase(m as Map<String, dynamic>))
+          .toList();
+
+      conversations.add(
+        SachetaConversation(
+          id: convId,
+          messages: messages,
+          createdAt: convMap['created_at'] != null
+              ? DateTime.parse(convMap['created_at'] as String)
+              : DateTime.now(),
+          updatedAt: convMap['updated_at'] != null
+              ? DateTime.parse(convMap['updated_at'] as String)
+              : DateTime.now(),
+        ),
+      );
     }
 
-    final raw = await f.readAsString();
-    final list = (json.decode(raw) as List<dynamic>)
-        .map((e) => SachetaConversation.fromJson(e as Map<String, dynamic>))
-        .toList();
-
-    // Most recent first.
-    list.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
-
-    _cache = list;
-    return _cache!;
+    return conversations;
   }
 
   /// Create a new conversation and return it.
   Future<SachetaConversation> createConversation() async {
-    final conversation = SachetaConversation(id: _uuid.v4(), messages: []);
+    final userId = _userId;
+    if (userId == null) {
+      throw StateError('No authenticated user');
+    }
 
-    final conversations = await loadConversations();
-    conversations.insert(0, conversation);
-    await _persistConversations(conversations);
+    final data = await _client
+        .from('conversations')
+        .insert({'user_id': userId})
+        .select()
+        .single();
 
-    return conversation;
+    return SachetaConversation(
+      id: data['id'] as String,
+      messages: [],
+      createdAt: data['created_at'] != null
+          ? DateTime.parse(data['created_at'] as String)
+          : DateTime.now(),
+      updatedAt: data['updated_at'] != null
+          ? DateTime.parse(data['updated_at'] as String)
+          : DateTime.now(),
+    );
   }
 
   /// Add a message to a conversation and persist.
@@ -72,29 +93,57 @@ class ConversationRepository {
     required String role,
     required String content,
   }) async {
-    final conversations = await loadConversations();
-    final index = conversations.indexWhere((c) => c.id == conversationId);
-
-    if (index == -1) {
-      throw StateError('Conversation $conversationId not found');
+    final userId = _userId;
+    if (userId == null) {
+      throw StateError('No authenticated user');
     }
 
-    final message = SachetaMessage(
-      id: _uuid.v4(),
-      role: role,
-      content: content,
+    // Insert message.
+    await _client.from('messages').insert({
+      'conversation_id': conversationId,
+      'user_id': userId,
+      'role': role,
+      'content': content,
+    });
+
+    // Update conversation's updated_at.
+    await _client
+        .from('conversations')
+        .update({'updated_at': DateTime.now().toIso8601String()})
+        .eq('id', conversationId);
+
+    // Reload full conversation.
+    return _loadConversation(conversationId);
+  }
+
+  /// Load a single conversation with all its messages.
+  Future<SachetaConversation> _loadConversation(String conversationId) async {
+    final convData = await _client
+        .from('conversations')
+        .select()
+        .eq('id', conversationId)
+        .single();
+
+    final msgData = await _client
+        .from('messages')
+        .select()
+        .eq('conversation_id', conversationId)
+        .order('created_at', ascending: true);
+
+    final messages = (msgData as List<dynamic>)
+        .map((m) => SachetaMessage.fromSupabase(m as Map<String, dynamic>))
+        .toList();
+
+    return SachetaConversation(
+      id: conversationId,
+      messages: messages,
+      createdAt: convData['created_at'] != null
+          ? DateTime.parse(convData['created_at'] as String)
+          : DateTime.now(),
+      updatedAt: convData['updated_at'] != null
+          ? DateTime.parse(convData['updated_at'] as String)
+          : DateTime.now(),
     );
-
-    final updatedMessages = [...conversations[index].messages, message];
-    final updated = conversations[index].copyWith(
-      messages: updatedMessages,
-      updatedAt: DateTime.now(),
-    );
-
-    conversations[index] = updated;
-    await _persistConversations(conversations);
-
-    return updated;
   }
 
   /// Get the most recent conversation, or null.
@@ -105,51 +154,47 @@ class ConversationRepository {
 
   /// Get conversation by id.
   Future<SachetaConversation?> getConversation(String id) async {
-    final conversations = await loadConversations();
     try {
-      return conversations.firstWhere((c) => c.id == id);
+      return await _loadConversation(id);
     } catch (_) {
       return null;
     }
   }
 
-  /// Delete a conversation by id.
+  /// Delete a conversation by id (messages cascade-delete via FK).
   Future<void> deleteConversation(String id) async {
-    final conversations = await loadConversations();
-    conversations.removeWhere((c) => c.id == id);
-    await _persistConversations(conversations);
+    await _client.from('conversations').delete().eq('id', id);
   }
 
-  Future<void> _persistConversations(
-    List<SachetaConversation> conversations,
-  ) async {
-    _cache = conversations;
-    final f = await _file;
-    final jsonStr = conversations.map((c) => c.toJson()).toList();
-    await f.writeAsString(const JsonEncoder.withIndent('  ').convert(jsonStr));
-  }
+  // ── Memory (long-term AI memory) ────────────────────────────
 
-  // ── Memory (long-term AI memory, separate from conversation history) ──
-
-  /// Load Sacheta's long-term memory.
+  /// Load Sacheta's long-term memory from Supabase (per user).
   Future<Map<String, dynamic>> loadMemory() async {
-    if (_memoryCache != null) return _memoryCache!;
+    final userId = _userId;
+    if (userId == null) return {};
 
-    final f = await _memoryFile;
-    if (!await f.exists()) {
-      _memoryCache = {};
-      return _memoryCache!;
+    try {
+      final data = await _client
+          .from('memories')
+          .select('content')
+          .eq('user_id', userId)
+          .maybeSingle();
+
+      if (data == null || data['content'] == null) return {};
+      return Map<String, dynamic>.from(data['content'] as Map);
+    } catch (_) {
+      return {};
     }
-
-    final raw = await f.readAsString();
-    _memoryCache = json.decode(raw) as Map<String, dynamic>;
-    return _memoryCache!;
   }
 
-  /// Update Sacheta's long-term memory.
+  /// Upsert Sacheta's long-term memory in Supabase (per user).
   Future<void> updateMemory(Map<String, dynamic> memory) async {
-    _memoryCache = memory;
-    final f = await _memoryFile;
-    await f.writeAsString(const JsonEncoder.withIndent('  ').convert(memory));
+    final userId = _userId;
+    if (userId == null) return;
+
+    await _client.from('memories').upsert({
+      'user_id': userId,
+      'content': memory,
+    }, onConflict: 'user_id');
   }
 }

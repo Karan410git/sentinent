@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../screens/entrance_screen.dart';
@@ -22,7 +24,6 @@ class SentinentApp extends StatelessWidget {
   }
 }
 
-/// Determines which screen to show based on session state.
 class _EntryGate extends StatefulWidget {
   const _EntryGate();
 
@@ -39,65 +40,75 @@ class _EntryGateState extends State<_EntryGate> {
     _resolve();
   }
 
+  // ─────────────────────────────────────────────────────────────
+  // Startup resolution
+  // ─────────────────────────────────────────────────────────────
+
   Future<void> _resolve() async {
-    final inSession = await SessionService.instance.isInSession;
-    if (!inSession) {
-      if (mounted) setState(() => _loading = false);
-      return;
-    }
-    final onboardingDone =
-        await SessionService.instance.hasCompletedIntroduction;
-    if (mounted) {
-      setState(() {
-        _loading = false;
-        _inSession = inSession;
-        _onboardingDone = onboardingDone;
-      });
-    }
-  }
+    debugPrint('[Sacheta Navigation] EntryGate resolving...');
 
-  bool _inSession = false;
-  bool _onboardingDone = false;
-
-  void _goToEntrance() {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => EntranceScreen(onNext: _checkAfterEntrance),
-      ),
-    );
-  }
-
-  void _checkAfterEntrance() async {
-    final onboardingDone =
-        await SessionService.instance.hasCompletedIntroduction;
+    // Wait a frame so Supabase can restore any persisted session.
+    await Future<void>.delayed(Duration.zero);
     if (!mounted) return;
 
+    final user = SessionService.instance.currentUser;
+
+    debugPrint(
+      '[Sacheta Navigation] Current user: '
+      '${user?.email ?? 'NONE'}',
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      _loading = false;
+    });
+
+    if (user == null) {
+      debugPrint('[Sacheta Navigation] No authenticated user -> Entrance');
+      _navigateToEntrance();
+      return;
+    }
+
+    debugPrint(
+      '[Sacheta Navigation] Authenticated user -> checking introduction',
+    );
+
+    final onboardingDone =
+        await SessionService.instance.hasCompletedIntroduction;
+
+    if (!mounted) return;
+
+    debugPrint('[Sacheta Navigation] onboardingDone = $onboardingDone');
+
     if (onboardingDone) {
+      debugPrint('[Sacheta Navigation] -> StudyScene');
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => StudyScene()),
+        MaterialPageRoute(builder: (_) => const StudyScene()),
         (route) => false,
       );
     } else {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (_) => InitiationScreen(
-            onComplete: () {
-              Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (_) => StudyScene()),
-                (route) => false,
-              );
-            },
-          ),
-        ),
+      debugPrint('[Sacheta Navigation] -> InitiationScreen');
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const InitiationScreen()),
+        (route) => false,
       );
     }
   }
 
-  void _goToDesk() {
-    Navigator.of(
-      context,
-    ).pushReplacement(MaterialPageRoute(builder: (_) => StudyScene()));
+  // ─────────────────────────────────────────────────────────────
+  // Navigate to entrance
+  // ─────────────────────────────────────────────────────────────
+
+  void _navigateToEntrance() {
+    debugPrint('[Sacheta Navigation] -> EntranceScreen');
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => EntranceScreen(onNext: () {})),
+      (route) => false,
+    );
   }
+
+  // ─────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -117,16 +128,7 @@ class _EntryGateState extends State<_EntryGate> {
       );
     }
 
-    if (_inSession && _onboardingDone) {
-      // Returning user — go straight to desk.
-      // Use addPostFrameCallback to avoid setState during build.
-      WidgetsBinding.instance.addPostFrameCallback((_) => _goToDesk());
-      return const Scaffold(backgroundColor: Color(0xFF0A0806));
-    }
-
-    // No session or first time — show entrance.
-    // Use addPostFrameCallback to avoid setState during build.
-    WidgetsBinding.instance.addPostFrameCallback((_) => _goToEntrance());
+    // Black scaffold shown briefly while navigation executes.
     return const Scaffold(backgroundColor: Color(0xFF0A0806));
   }
 }

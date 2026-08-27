@@ -1,104 +1,90 @@
-import 'dart:convert';
-import 'dart:io';
-
-import 'package:path_provider/path_provider.dart';
-import 'package:uuid/uuid.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'diary_entry.dart';
 
-/// Simple local persistence for diary entries using a single JSON file.
-/// No backend, no accounts — just local-first storage.
+/// Persistence for diary entries using Supabase.
+/// Supabase is the single source of truth. RLS enforces per-user isolation.
 class DiaryRepository {
   DiaryRepository._();
 
   static final DiaryRepository instance = DiaryRepository._();
 
-  static const _fileName = 'sacheta_entries.json';
-  static const _uuid = Uuid();
+  SupabaseClient get _client => Supabase.instance.client;
+  String? get _userId => _client.auth.currentUser?.id;
 
-  List<DiaryEntry>? _cache;
+  // ── Read ─────────────────────────────────────────────────────
 
-  Future<File> get _file async {
-    final dir = await getApplicationDocumentsDirectory();
-    return File('${dir.path}/$_fileName');
-  }
-
-  /// Load all entries from disk (cached after first read).
+  /// Load all diary entries for the current user, most recent first.
   Future<List<DiaryEntry>> loadEntries() async {
-    if (_cache != null) return _cache!;
+    final userId = _userId;
+    if (userId == null) return [];
 
-    final f = await _file;
-    if (!await f.exists()) {
-      _cache = [];
-      return _cache!;
-    }
+    final data = await _client
+        .from('diary_pages')
+        .select()
+        .eq('user_id', userId)
+        .order('created_at', ascending: false);
 
-    final raw = await f.readAsString();
-    final list = (json.decode(raw) as List<dynamic>)
-        .map((e) => DiaryEntry.fromJson(e as Map<String, dynamic>))
+    return (data as List<dynamic>)
+        .map((e) => DiaryEntry.fromSupabase(e as Map<String, dynamic>))
         .toList();
-
-    // Most recent first.
-    list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-
-    _cache = list;
-    return _cache!;
   }
 
-  /// Create a new blank entry and return it.
-  Future<DiaryEntry> createEntry({String content = ''}) async {
-    final entry = DiaryEntry(id: _uuid.v4(), content: content);
+  /// Get entry by id.
+  Future<DiaryEntry?> getEntry(String id) async {
+    final data = await _client
+        .from('diary_pages')
+        .select()
+        .eq('id', id)
+        .maybeSingle();
 
-    final entries = await loadEntries();
-    entries.insert(0, entry);
-    await _persist(entries);
-
-    return entry;
+    if (data == null) return null;
+    return DiaryEntry.fromSupabase(data);
   }
 
-  /// Update an existing entry's content.
-  Future<DiaryEntry> updateEntry(String id, {required String content}) async {
-    final entries = await loadEntries();
-    final index = entries.indexWhere((e) => e.id == id);
-
-    if (index == -1) {
-      throw StateError('Entry $id not found');
-    }
-
-    final updated = entries[index].copyWith(content: content);
-    entries[index] = updated;
-    await _persist(entries);
-
-    return updated;
-  }
-
-  /// Delete an entry by id.
-  Future<void> deleteEntry(String id) async {
-    final entries = await loadEntries();
-    entries.removeWhere((e) => e.id == id);
-    await _persist(entries);
-  }
-
-  /// Get the most recent entry, or null if none exist.
+  /// Get the most recent entry, or null.
   Future<DiaryEntry?> getLatestEntry() async {
     final entries = await loadEntries();
     return entries.isEmpty ? null : entries.first;
   }
 
-  /// Get entry by id.
-  Future<DiaryEntry?> getEntry(String id) async {
-    final entries = await loadEntries();
-    try {
-      return entries.firstWhere((e) => e.id == id);
-    } catch (_) {
-      return null;
+  // ── Write ────────────────────────────────────────────────────
+
+  /// Create a new blank diary page and return it.
+  Future<DiaryEntry> createEntry({String content = ''}) async {
+    final userId = _userId;
+    if (userId == null) {
+      throw StateError('No authenticated user');
     }
+
+    final data = await _client
+        .from('diary_pages')
+        .insert({
+          'user_id': userId,
+          'content': content,
+          'mode': 'my_pages',
+          'page_date': DateTime.now().toIso8601String().substring(0, 10),
+        })
+        .select()
+        .single();
+
+    return DiaryEntry.fromSupabase(data);
   }
 
-  Future<void> _persist(List<DiaryEntry> entries) async {
-    _cache = entries;
-    final f = await _file;
-    final json = entries.map((e) => e.toJson()).toList();
-    await f.writeAsString(const JsonEncoder.withIndent('  ').convert(json));
+  /// Update an existing entry's content.
+  Future<DiaryEntry> updateEntry(String id, {required String content}) async {
+    final data = await _client
+        .from('diary_pages')
+        .update({'content': content})
+        .eq('id', id)
+        .select()
+        .single();
+
+    return DiaryEntry.fromSupabase(data);
+  }
+
+  /// Delete an entry by id.
+  Future<void> deleteEntry(String id) async {
+    await _client.from('diary_pages').delete().eq('id', id);
   }
 }
