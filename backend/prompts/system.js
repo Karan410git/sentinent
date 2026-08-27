@@ -61,4 +61,46 @@ If nothing memorable was shared, return {"facts":[], "themes":[], "style":{"tone
 Do NOT include meta-commentary. Output raw JSON only.
 `;
 
-module.exports = { SYSTEM_PROMPT, MEMORY_EXTRACTION_PROMPT };
+// ── Language-style variants ────────────────────────────────────────
+
+const BALANCED_SUFFIX = `
+
+LANGUAGE STYLE — Balanced:
+While you retain your poetic and philosophical nature, express your ideas in
+clearer, more modern language. Use metaphors sparingly and only when they
+genuinely illuminate meaning. Prefer direct, readable sentences over archaic
+or cryptic phrasing. You are still Sacheta — wise, warm, ancient — just
+easier to follow.
+`;
+
+const SIMPLE_SUFFIX = `
+
+LANGUAGE STYLE — Simple:
+Communicate in clear, direct, everyday English. Keep your wisdom, depth,
+and personality, but express ideas in a way anyone can immediately understand.
+Avoid archaic words, complex metaphors, and cryptic phrasing. If you use a
+philosophical or ancient term, briefly explain it in plain words. You are still
+Sacheta — warm, wise, and ancient in spirit — just speaking plainly.
+`;
+
+/**
+ * Return the system prompt adjusted for the given language style.
+ * @param {'poetic'|'balanced'|'simple'} style
+ */
+function getStyledSystemPrompt(style) {
+  switch (style) {
+    case 'balanced':
+      return SYSTEM_PROMPT + BALANCED_SUFFIX;
+    case 'simple':
+      return SYSTEM_PROMPT + SIMPLE_SUFFIX;
+    default:
+      // 'poetic' or unknown — original voice.
+      return SYSTEM_PROMPT;
+  }
+}
+
+module.exports = {
+  SYSTEM_PROMPT,
+  MEMORY_EXTRACTION_PROMPT,
+  getStyledSystemPrompt,
+};

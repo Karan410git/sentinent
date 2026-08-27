@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { getProvider } = require('../providers');
 const memory = require('../lib/memory');
-const { SYSTEM_PROMPT, MEMORY_EXTRACTION_PROMPT } = require('../prompts/system');
+const { SYSTEM_PROMPT, MEMORY_EXTRACTION_PROMPT, getStyledSystemPrompt } = require('../prompts/system');
 
 /**
  * POST /api/sacheta/respond
@@ -16,7 +16,7 @@ const { SYSTEM_PROMPT, MEMORY_EXTRACTION_PROMPT } = require('../prompts/system')
  */
 router.post('/respond', async (req, res) => {
   try {
-    const { messages, conversationId } = req.body;
+    const { messages, conversationId, languageStyle } = req.body;
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return res.status(400).json({ error: 'messages array is required' });
@@ -27,8 +27,10 @@ router.post('/respond', async (req, res) => {
     const memoryContext = buildMemoryContext(mem);
 
     // Build context messages for the AI.
+    // Use the language-style variant of the system prompt.
+    const style = languageStyle || 'poetic';
     const contextMessages = [
-      { role: 'system', content: SYSTEM_PROMPT },
+      { role: 'system', content: getStyledSystemPrompt(style) },
     ];
 
     if (memoryContext) {

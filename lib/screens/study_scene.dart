@@ -3,8 +3,6 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:google_fonts/google_fonts.dart';
-
 import '../animations/entrance_animation.dart';
 import '../models/conversation_repository.dart';
 import '../models/diary_entry.dart';
@@ -23,6 +21,7 @@ import '../widgets/sacheta_open.dart';
 import '../services/sacheta_mind.dart';
 import '../services/ai_provider.dart';
 import '../services/ai_config.dart';
+import 'settings_screen.dart';
 
 /// Top-level state for the diary interaction.
 enum _DiaryState {
@@ -383,7 +382,8 @@ class _StudySceneState extends State<StudyScene> with TickerProviderStateMixin {
       return;
     }
     if (origin == _DiaryState.history) {
-      final conversations = await ConversationRepository.instance.loadConversations();
+      final conversations = await ConversationRepository.instance
+          .loadConversations();
       _conversations = conversations;
       _lastTopLevelSection = null;
       setState(() {
@@ -708,10 +708,6 @@ class _StudySceneState extends State<StudyScene> with TickerProviderStateMixin {
                       ),
 
                       AmbientDust(elapsed: ambientElapsed),
-
-                      // Loose page labels (JOURNEY / HISTORY).
-                      if (_diaryState == _DiaryState.closed)
-                        _buildLoosePageLabels(),
                     ],
                   ),
                 ),
@@ -719,6 +715,32 @@ class _StudySceneState extends State<StudyScene> with TickerProviderStateMixin {
 
               // Candle glow.
               CandleGlow(entrance: _entrance),
+
+              // The Key — settings entry point.
+              if (_diaryState == _DiaryState.closed)
+                Positioned(
+                  right: 20,
+                  bottom: MediaQuery.of(context).padding.bottom + 20,
+                  child: _SettingsKey(
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => SettingsScreen(
+                            onLogout: () {
+                              Navigator.of(context).pushReplacementNamed('/');
+                            },
+                            onHistory: () {
+                              _openHistory();
+                            },
+                            onJourney: () {
+                              _openJourney();
+                            },
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
 
               // Mode selector overlay.
               if (showModeSelect)
@@ -796,45 +818,19 @@ class _StudySceneState extends State<StudyScene> with TickerProviderStateMixin {
     if (index < 0 || index >= _entries.length) return;
     setState(() => _currentEntryIndex = index);
   }
-
-  // ── Loose page labels ─────────────────────────────────────────
-
-  Widget _buildLoosePageLabels() {
-    // Positioned on the left side of the desk, over the loose note pages.
-    return Stack(
-      children: [
-        // JOURNEY label — on the upper loose page (left side).
-        Positioned(
-          left: MediaQuery.sizeOf(context).width * 0.11,
-          top: MediaQuery.sizeOf(context).height * 0.60,
-          child: _LooseLabel(text: 'JOURNEY', onTap: _openJourney),
-        ),
-
-        // HISTORY label — on the lower loose page (left side).
-        Positioned(
-          left: MediaQuery.sizeOf(context).width * 0.17,
-          top: MediaQuery.sizeOf(context).height * 0.70,
-          child: _LooseLabel(text: 'HISTORY', onTap: _openHistory),
-        ),
-      ],
-    );
-  }
 }
 
-/// A styled loose label for the desk — feels like handwritten text on
-/// a physical scrap of paper, with a subtle ink-stain background.
-/// Includes a press-scale animation for tactile feedback.
-class _LooseLabel extends StatefulWidget {
-  const _LooseLabel({required this.text, required this.onTap});
+/// "The Key" — a small brass key icon for settings, positioned on desk.
+class _SettingsKey extends StatefulWidget {
+  const _SettingsKey({required this.onTap});
 
-  final String text;
   final VoidCallback onTap;
 
   @override
-  State<_LooseLabel> createState() => _LooseLabelState();
+  State<_SettingsKey> createState() => _SettingsKeyState();
 }
 
-class _LooseLabelState extends State<_LooseLabel>
+class _SettingsKeyState extends State<_SettingsKey>
     with SingleTickerProviderStateMixin {
   late AnimationController _pressController;
   late Animation<double> _pressScale;
@@ -846,7 +842,7 @@ class _LooseLabelState extends State<_LooseLabel>
       vsync: this,
       duration: const Duration(milliseconds: 100),
     );
-    _pressScale = Tween<double>(begin: 1.0, end: 0.92).animate(
+    _pressScale = Tween<double>(begin: 1.0, end: 0.88).animate(
       CurvedAnimation(parent: _pressController, curve: Curves.easeInOut),
     );
   }
@@ -867,31 +863,27 @@ class _LooseLabelState extends State<_LooseLabel>
       child: ScaleTransition(
         scale: _pressScale,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+          width: 40,
+          height: 40,
           decoration: BoxDecoration(
-            color: const Color(0xFF2A1A0A).withValues(alpha: 0.5),
-            borderRadius: BorderRadius.circular(3),
+            color: const Color(0xFF1A120A).withValues(alpha: 0.5),
+            shape: BoxShape.circle,
             border: Border.all(
-              color: const Color(0xFFD4C5A9).withValues(alpha: 0.12),
-              width: 0.5,
+              color: const Color(0xFFB8943E).withValues(alpha: 0.2),
+              width: 0.8,
             ),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.3),
-                blurRadius: 4,
-                offset: const Offset(0, 1),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
               ),
             ],
           ),
-          child: Text(
-            widget.text,
-            style: GoogleFonts.caveat(
-              fontSize: 15,
-              color: const Color(0xFFD4C5A9).withValues(alpha: 0.7),
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.8,
-              height: 1.1,
-            ),
+          child: Icon(
+            Icons.vpn_key,
+            size: 16,
+            color: const Color(0xFFB8943E).withValues(alpha: 0.5),
           ),
         ),
       ),

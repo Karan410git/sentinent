@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../models/sacheta_message.dart';
+import 'ai_config.dart';
 import 'ai_provider.dart';
 
 /// The character brain of Sacheta.
@@ -25,10 +26,9 @@ class SachetaMind {
     required String conversationId,
     required List<SachetaMessage> messages,
   }) async {
+    final languageStyle = AIConfig.instance.languageStyle;
     try {
-      final headers = <String, String>{
-        'Content-Type': 'application/json',
-      };
+      final headers = <String, String>{'Content-Type': 'application/json'};
 
       final response = await http.post(
         Uri.parse('$_baseUrl/api/sacheta/respond'),
@@ -38,6 +38,7 @@ class SachetaMind {
           'messages': messages
               .map((m) => {'role': m.role, 'content': m.content})
               .toList(),
+          'languageStyle': languageStyle,
         }),
       );
 
@@ -74,9 +75,7 @@ class SachetaMind {
     required List<SachetaMessage> messages,
   }) async {
     try {
-      final headers = <String, String>{
-        'Content-Type': 'application/json',
-      };
+      final headers = <String, String>{'Content-Type': 'application/json'};
 
       await http.post(
         Uri.parse('$_baseUrl/api/sacheta/extract-memory'),
