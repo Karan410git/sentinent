@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-/// Privacy Policy page — honest about current local-only state.
+/// Privacy Policy page — reflects the current state of Sacheta.
 class PrivacyScreen extends StatelessWidget {
   const PrivacyScreen({super.key});
 
@@ -62,48 +62,101 @@ class PrivacyScreen extends StatelessWidget {
                         title: 'PRIVACY POLICY',
                         body:
                             'Sacheta is a personal diary application designed for '
-                            'private, reflective writing.\n\n'
-                            'This is a development version. Real account authentication '
-                            'and cloud synchronization are not yet implemented.',
+                            'private, reflective writing. This policy explains how '
+                            'your information is handled when you use Sacheta.',
                       ),
                       const SizedBox(height: 24),
                       _Section(
-                        title: 'LOCAL STORAGE',
+                        title: 'ACCOUNT & AUTHENTICATION',
                         body:
-                            'All diary entries and conversations are stored '
-                            'locally on your device. No data is transmitted to '
-                            'external servers during normal use.\n\n'
-                            'The AI companion (Sacheta) sends conversation messages '
-                            'to a local backend server for processing. This backend '
-                            'runs on your device and does not transmit data externally.',
+                            'Sacheta uses Google Sign-In to authenticate your '
+                            'account. When you sign in with Google, Sacheta '
+                            'receives your name, email address, and profile '
+                            'picture from your Google account. This information '
+                            'is used solely to identify your account and '
+                            'personalize your experience within the app.\n\n'
+                            'You may also create an account using an email '
+                            'address and password. In this case, only your '
+                            'email address is stored.',
                       ),
                       const SizedBox(height: 24),
                       _Section(
-                        title: 'DATA OWNERSHIP',
+                        title: 'YOUR DIARY ENTRIES',
                         body:
-                            'Your diary entries and conversations belong to you. '
-                            'They remain on your device until you choose to delete them.\n\n'
-                            'Logging out does not delete your data. Your entries '
-                            'and conversation history are preserved.',
+                            'Your diary entries are personal writing stored '
+                            'securely in your account. Only you can access '
+                            'your own entries. Sacheta does not read, analyze, '
+                            'or share your private diary content with any '
+                            'third party.',
                       ),
                       const SizedBox(height: 24),
                       _Section(
-                        title: 'ACCOUNTS',
+                        title: 'SACHETA CONVERSATIONS',
                         body:
-                            'In this version, no real accounts exist. You are '
-                            'using a temporary local session. No personal information '
-                            'is collected, stored, or transmitted.\n\n'
-                            'When real authentication is implemented, this policy '
-                            'will be updated to reflect actual data practices.',
+                            'When you speak with Sacheta, your messages are '
+                            'processed to generate responses. These '
+                            'conversations are stored in your account and are '
+                            'used to provide the AI companion experience.\n\n'
+                            'Conversation content may be processed by AI '
+                            'services to generate replies. This processing '
+                            'happens in real time and is used exclusively to '
+                            'power your Sacheta experience.',
                       ),
                       const SizedBox(height: 24),
                       _Section(
-                        title: 'FUTURE CHANGES',
+                        title: 'MEMORIES & CONTEXT',
                         body:
-                            'As Sacheta evolves, cloud synchronization and '
-                            'optional account features may be added. This privacy '
-                            'policy will be updated to reflect any changes to '
-                            'data handling practices.',
+                            'Sacheta may retain memories and contextual '
+                            'information from your interactions to provide a '
+                            'more personalized and coherent experience over '
+                            'time. This information is tied to your account '
+                            'and is not shared with other users.',
+                      ),
+                      const SizedBox(height: 24),
+                      _Section(
+                        title: 'AI PROCESSING',
+                        body:
+                            'Sacheta uses artificial intelligence to power '
+                            'conversations and provide its companion features. '
+                            'Your input is sent to AI services for processing '
+                            'in order to generate responses. This processing '
+                            'is conducted solely to provide the app\'s features '
+                            'to you.',
+                      ),
+                      const SizedBox(height: 24),
+                      _Section(
+                        title: 'DATA STORAGE & SECURITY',
+                        body:
+                            'Your account data, diary entries, and '
+                            'conversations are stored on secure cloud servers. '
+                            'Access to your data is protected by authentication '
+                            '— only you, signed into your own account, can '
+                            'access your information.\n\n'
+                            'We take reasonable measures to protect your data, '
+                            'but no method of storage or transmission is '
+                            'completely secure.',
+                      ),
+                      const SizedBox(height: 24),
+                      _Section(
+                        title: 'YOUR CONTROL',
+                        body:
+                            'You are in control of your data. You can:\n\n'
+                            '• Access your account information at any time '
+                            'from the Account section.\n'
+                            '• Delete your diary entries and conversations '
+                            'within the app.\n'
+                            '• Log out of your account at any time.\n'
+                            '• Request deletion of your account and all '
+                            'associated data.',
+                      ),
+                      const SizedBox(height: 24),
+                      _Section(
+                        title: 'CHANGES TO THIS POLICY',
+                        body:
+                            'As Sacheta evolves, this privacy policy may be '
+                            'updated to reflect new features or changes in '
+                            'how your data is handled. Significant changes '
+                            'will be communicated within the app.',
                       ),
                       const SizedBox(height: 40),
                     ],

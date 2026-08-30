@@ -21,7 +21,7 @@ class EntranceScreen extends StatefulWidget {
 }
 
 class _EntranceScreenState extends State<EntranceScreen>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   late final AnimationController _fadeController;
   late final AnimationController _dustController;
 
@@ -33,12 +33,14 @@ class _EntranceScreenState extends State<EntranceScreen>
 
   bool _isLoading = false;
   String? _errorMessage;
+  bool _navigating = false;
 
   StreamSubscription<AuthState>? _authSub;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
 
     _fadeController = AnimationController(
       vsync: this,
@@ -50,42 +52,84 @@ class _EntranceScreenState extends State<EntranceScreen>
       duration: const Duration(seconds: 18),
     )..repeat();
 
-    // Listen for OAuth return — Supabase fires signedIn after
-    // the browser redirect completes and the session is established.
     _authSub = Supabase.instance.client.auth.onAuthStateChange.listen((
       state,
     ) async {
-      if (!mounted) return;
+      if (!mounted || _navigating) return;
 
-      final event = state.event;
-      debugPrint('[Sacheta Auth UI] Auth state change: $event');
+      debugPrint(
+        '[Sacheta Auth UI] onAuthStateChange: ${state.event}, '
+        'session=${state.session != null}',
+      );
 
-      if (event == AuthChangeEvent.signedIn ||
-          event == AuthChangeEvent.tokenRefreshed) {
-        if (state.session != null) {
-          final onboardingDone =
-              await SessionService.instance.hasCompletedIntroduction;
-          if (!mounted) return;
-
-          setState(() => _isLoading = false);
-
-          if (onboardingDone) {
-            Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (_) => const StudyScene()),
-              (route) => false,
-            );
-          } else {
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (_) => const InitiationScreen()),
-            );
-          }
-        }
+      if (state.session != null) {
+        debugPrint('[Sacheta Auth UI] Session found — navigating');
+        await _navigateAfterAuth();
       }
     });
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    debugPrint(
+      '[Sacheta Auth UI] Lifecycle: $state, '
+      'isLoading=$_isLoading, navigating=$_navigating',
+    );
+
+    if (state == AppLifecycleState.resumed && mounted) {
+      // Always reset loading so buttons become responsive.
+      if (_isLoading) {
+        debugPrint('[Sacheta Auth UI] Resetting _isLoading on resume');
+        setState(() {
+          _isLoading = false;
+        });
+      }
+
+      // Fallback: if the auth event was missed, check the session directly.
+      if (!_navigating) {
+        final session = Supabase.instance.client.auth.currentSession;
+        debugPrint(
+          '[Sacheta Auth UI] currentSession on resume: ${session != null}',
+        );
+        if (session != null) {
+          debugPrint('[Sacheta Auth UI] Fallback: session on resume — navigating');
+          _navigateAfterAuth();
+        }
+      }
+    }
+  }
+
+  Future<void> _navigateAfterAuth() async {
+    if (_navigating || !mounted) return;
+    _navigating = true;
+
+    debugPrint('[Sacheta Auth UI] _navigateAfterAuth called');
+
+    final onboardingDone =
+        await SessionService.instance.hasCompletedIntroduction;
+    if (!mounted) return;
+
+    setState(() {
+      _isLoading = false;
+    });
+
+    if (onboardingDone) {
+      debugPrint('[Sacheta Auth UI] → StudyScene');
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const StudyScene()),
+        (route) => false,
+      );
+    } else {
+      debugPrint('[Sacheta Auth UI] → InitiationScreen');
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const InitiationScreen()),
+      );
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _authSub?.cancel();
 
     _fadeController.dispose();
@@ -274,12 +318,16 @@ class _EntranceScreenState extends State<EntranceScreen>
         authScreenLaunchMode: LaunchMode.externalApplication,
       );
 
-      debugPrint('[Sacheta Auth UI] Google OAuth returned: $error');
+      debugPrint('[Sacheta Auth UI] signInWithOAuth returned: $error');
 
       if (!mounted) return;
 
-      // signInWithOAuth opens the browser — auth state listener handles
-      // session establishment when the user returns to the app.
+      debugPrint('[Sacheta Auth UI] Google OAuth launch failed: $error');
+      setState(() {
+        _isLoading = false;
+        _errorMessage =
+            'Something interrupted the journey to Google. Please try again.';
+      });
     } catch (e) {
       debugPrint('[Sacheta Auth UI] Google OAuth error: $e');
       if (!mounted) return;

@@ -170,6 +170,68 @@ class SessionService {
   /// Alias for signOut — used by existing SettingsScreen code.
   Future<void> logout() async => signOut();
 
+  // ── Profile Picture (Supabase Storage) ───────────────────────
+
+  static const _avatarBucket = 'avatars';
+
+  /// Upload a profile picture for the current user.
+  ///
+  /// [bytes] — compressed image bytes.
+  /// [fileExtension] — e.g. 'jpg', 'png'.
+  ///
+  /// Returns the public URL of the uploaded image.
+  Future<String> uploadAvatar({
+    required Uint8List bytes,
+    required String fileExtension,
+  }) async {
+    final user = currentUser;
+    if (user == null) throw Exception('No authenticated user');
+
+    final ext = fileExtension.toLowerCase();
+    final contentType = ext == 'png' ? 'image/png' : 'image/jpeg';
+    final path = '${user.id}/avatar.$ext';
+
+    await _client.storage.from(_avatarBucket).uploadBinary(
+          path,
+          bytes,
+          fileOptions: FileOptions(
+            contentType: contentType,
+            upsert: true,
+          ),
+        );
+
+    final publicUrl =
+        _client.storage.from(_avatarBucket).getPublicUrl(path);
+
+    // Persist URL in user metadata so the UI can display it.
+    await _client.auth.updateUser(
+      UserAttributes(data: {'avatar_url': publicUrl}),
+    );
+
+    return publicUrl;
+  }
+
+  /// Remove the current user's profile picture.
+  Future<void> deleteAvatar() async {
+    final user = currentUser;
+    if (user == null) return;
+
+    // Try to delete all common extensions.
+    for (final ext in ['jpg', 'jpeg', 'png', 'webp']) {
+      try {
+        await _client.storage
+            .from(_avatarBucket)
+            .remove(['${user.id}/avatar.$ext']);
+      } catch (_) {
+        // Ignore — file may not exist.
+      }
+    }
+
+    await _client.auth.updateUser(
+      UserAttributes(data: {'avatar_url': null}),
+    );
+  }
+
   // ── Error mapping ─────────────────────────────────────────────
 
   String _mapAuthError(AuthException e) {
