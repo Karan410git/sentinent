@@ -9,7 +9,7 @@ class AIConfig {
 
   static final AIConfig instance = AIConfig._();
 
-  String _backendUrl = 'http://192.168.0.106:3000';
+  String _backendUrl = 'https://sentinent-kohl.vercel.app';
 
   /// 'poetic', 'balanced', or 'simple'.
   String _languageStyle = 'balanced';
