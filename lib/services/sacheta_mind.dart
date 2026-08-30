@@ -17,8 +17,7 @@ class SachetaMind {
   SachetaMind._();
 
   /// Backend base URL. Change for production deployment.
-  static const _baseUrl = 'http://192.168.0.106:3000';
-
+ static const _baseUrl = 'https://sentinent-kohl.vercel.app';
   /// Get the current Supabase access token for backend auth.
   static String? get _accessToken =>
       Supabase.instance.client.auth.currentSession?.accessToken;
